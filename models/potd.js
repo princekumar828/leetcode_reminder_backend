@@ -4,7 +4,8 @@ const potdSchema = new mongoose.Schema({
   date: {
     type: Date,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   title: {
     type: String,
@@ -15,9 +16,6 @@ const potdSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
-// Add index for faster queries
-potdSchema.index({ date: 1 });
 
 // Static method to get today's POTD with caching
 let potdCache = {
