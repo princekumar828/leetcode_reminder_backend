@@ -99,19 +99,20 @@ const isProblemOfDaySolved = async (username) => {
       // Parse submission timestamp in UTC
       const submissionDate = new Date(submission.timestamp * 1000);
       
-      return submission.title === potd.title && 
-             submissionDate.getUTCFullYear() >= problemOfDayDate.getUTCFullYear() &&
-             submissionDate.getUTCMonth() >= problemOfDayDate.getUTCMonth() &&
-             submissionDate.getUTCDate() >= problemOfDayDate.getUTCDate();
+      // Check if submission is from today and matches the POTD title
+      return submissionDate.getUTCDate() === problemOfDayDate.getUTCDate() &&
+             submissionDate.getUTCMonth() === problemOfDayDate.getUTCMonth() &&
+             submissionDate.getUTCFullYear() === problemOfDayDate.getUTCFullYear() &&
+             submission.title === potd.title;
     });
-
-    return {isSolved, problemOfDay: potd};
-  } catch (error) {
-    console.error('Error checking if problem of the day is solved:', error.message);
+    
     return {
-      isSolved: false,
-      problemOfDay: null
+      isSolved,
+      problemOfDay: potd
     };
+  } catch (error) {
+    console.error('Error checking if POTD is solved:', error.message);
+    throw error;
   }
 };
 

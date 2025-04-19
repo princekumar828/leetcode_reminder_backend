@@ -1,7 +1,8 @@
 var cron = require('node-cron');
-const { getProblemOfDay } = require('./services/leetcodeService');
+const { getProblemOfDay, isProblemOfDaySolved } = require('./services/leetcodeService');
 const { sendTelegramReminder } = require('./telegram/notifications');
 const POTD = require('./models/potd');
+const User = require('./models/users');
 
 // Batch size for processing users
 const BATCH_SIZE = 50;
