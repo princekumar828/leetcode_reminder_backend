@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const dotenv = require('dotenv');
 dotenv.config();
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const {isProblemOfDaySolved , getRecentAcceptedSubmissions} = require('../services/leetcodeService');
+const {isProblemOfDaySolved , getRecentAcceptedSubmissions ,getProblemOfDay} = require('../services/leetcodeService');
 const bot = new TelegramBot(token, { polling: true });
 
 // Start command
@@ -478,21 +478,36 @@ bot.onText(/\/rsubmissions/, async (msg) => {
     } else {
         bot.sendMessage(chatId, `No recent submissions found.`);
     }
-}
-);
+});
 
-
-
-
-
-
-
+// sync the today pod to database 
+bot.onText(/\/syspotd/, async (msg) => {
+    try {
+        console.log("🔄 Sync new POTD .");
+        
+        
+        const { date, title } = await getProblemOfDay();
+        
+        // Create new POTD entry
+        const potdDate = new Date(date);
+        potdDate.setUTCHours(0, 0, 0, 0);
+        
+        await POTD.findOneAndUpdate(
+          { date: potdDate },
+          { title, date: potdDate },
+          { upsert: true, new: true }
+        );
+        
+        console.log("✅ New POTD stored successfully:", title);
+        
+      } catch (error) {
+        console.error("❌ Error fetching/storing POTD:", error.message);
+      }
+});
 
 // Handle any errors
 bot.on('polling_error', (error) => {
   console.error(`Polling error: ${error.message}`);
 });
-
-
 
 module.exports = bot;
