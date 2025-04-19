@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const dotenv = require('dotenv');
 dotenv.config();
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const {isProblemOfDaySolved} = require('../services/leetcodeService');
+const {isProblemOfDaySolved , getRecentAcceptedSubmissions} = require('../services/leetcodeService');
 const bot = new TelegramBot(token, { polling: true });
 
 // Start command
@@ -59,6 +59,7 @@ bot.onText(/\/help/, async (msg) => {
 /cancel - Cancel the current setup process
 /contact - Contact support for assistance
 /potd - Get the problem of the day status
+/rsubmissions - Get your recent submissions
 
 Update Commands:
 /update_email - Update your email address
@@ -358,7 +359,7 @@ bot.on("message", async (msg) => {
             return;
         }
         
-        user.email = text;
+        user.email = text.toLowerCase().trim();
         user.step = 'askLeetCodeUsername';
         await user.save();
         
@@ -371,7 +372,7 @@ bot.on("message", async (msg) => {
             return;
         }
         
-        user.leetcodeUsername = text;
+        user.leetcodeUsername = text.toLowerCase().trim();
         user.step = 'askWhatsAppNumber';
         await user.save();
         
@@ -385,7 +386,7 @@ bot.on("message", async (msg) => {
             return;
         }
         
-        user.whatsappNumber = text;
+        user.whatsappNumber = text.trim();
         user.step = 'askReminderFrequency';
         await user.save();
         
@@ -454,6 +455,32 @@ bot.on("message", async (msg) => {
         bot.sendMessage(chatId, `I'm not sure what to do with that. Use /help to see available commands.`);
     }
 });
+
+bot.onText(/\/rsubmissions/, async (msg) => {
+    const chatId = msg.chat.id;
+    const user = await User.findOne({ telegramChatId: chatId });
+    if (!user) {
+        bot.sendMessage(chatId, `Please start the bot first by sending /start`);
+        return;
+    }
+    if (user.step !== 'completed') {
+        bot.sendMessage(chatId, `Please complete the setup process first by sending /setup`);
+        return;
+    }
+    // Fetch the submissions from LeetCode API
+    const submissions = await getRecentAcceptedSubmissions(user.leetcodeUsername);
+    if (submissions && submissions.length > 0) {
+        let message = `📜 Your Recent Submissions:\n\n`;
+        submissions.forEach((submission, index) => {
+            message += `${index + 1}. Problem: ${submission.title}\n`;
+        });
+        bot.sendMessage(chatId, message);
+    } else {
+        bot.sendMessage(chatId, `No recent submissions found.`);
+    }
+}
+);
+
 
 
 

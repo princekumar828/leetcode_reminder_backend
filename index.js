@@ -15,6 +15,27 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  const toLowercaseDeep = (obj) => {
+    if (typeof obj === 'string') {
+      return obj.toLowerCase();
+    } else if (Array.isArray(obj)) {
+      return obj.map(toLowercaseDeep);
+    } else if (typeof obj === 'object' && obj !== null) {
+      return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [key, toLowercaseDeep(value)])
+      );
+    }
+    return obj;
+  };
+
+  if (req.body && typeof req.body === 'object') {
+    req.body = toLowercaseDeep(req.body);
+  }
+
+  next();
+});
+
 
 
 

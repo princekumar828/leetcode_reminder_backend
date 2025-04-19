@@ -1,6 +1,8 @@
 
 
+const TelegramBot = require('node-telegram-bot-api');
 const User = require('../models/users');
+const {isProblemOfDaySolved}  = require('../services/leetcodeService');
 
 
 const handlegetuserbyemail = async (req, res) => {
@@ -59,6 +61,7 @@ const handelusersetup = async (req, res) => {
       if (!email || !leetcodeUsername) {
         return res.status(400).json({ error: "Email and LeetCode username are required." });
       }
+      
   
       const user = await User.findOneAndUpdate(
         { email },
@@ -90,8 +93,45 @@ const handelusersetup = async (req, res) => {
   };
 
 
+  const handeuserpotdstatus=async (req,res)=>{
+    const { email } = req.body;
+    if (!email ) {
+        return res.status(400).json({ message: 'Email required' });
+    }
+
+    console.log(email);
+    // Check if the email is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    const user = await User.findOne(
+        { email: email },
+    )
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+    const leetcodeUsername = user.leetcodeUsername;
+    if(!leetcodeUsername){
+        return res.status(404).json({ message: 'LeetCode username not found' });
+    }
+    const potd = await isProblemOfDaySolved(leetcodeUsername);
+    const status= potd.isSolved? true : false;
+    const potdtitel= potd.problemOfDay.title;
+    
+    return res.status(200).json(
+    { 
+    message: `The POTD is ${status ? 'solved' : 'not solved'}` ,
+    status: status,
+    titel: potdtitel,
+    });
+  }
+
+
 module.exports = {
     handlegetuserbyemail,
     handeluserdelete,
-     handelusersetup
+     handelusersetup,
+     handeuserpotdstatus
 }

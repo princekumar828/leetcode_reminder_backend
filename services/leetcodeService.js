@@ -58,7 +58,9 @@ const getRecentAcceptedSubmissions = async (username, limit = 15) => {
       }
     });
     
+    //console.log('Recent accepted submissions:', response.data.data.recentAcSubmissionList);
     return response.data.data.recentAcSubmissionList;
+   
   } catch (error) {
     console.error('Error fetching recent submissions:', error.message);
     throw error;
