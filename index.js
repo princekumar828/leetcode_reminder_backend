@@ -3,7 +3,7 @@ const app = express()
 require('./telegram/telegramBot')
 const cors = require('cors')
 
-
+require('./scheduler')
 const dotenv = require('dotenv')
 dotenv.config()
 
@@ -38,8 +38,6 @@ app.use((req, res, next) => {
 
 
 
-
-
 //Conection
 const connectdb= require('./connection')
 connectdb()
@@ -50,6 +48,7 @@ connectdb()
 const userrouter = require('./routes/users')
 //Routes
 app.use('/users', userrouter)
+app.use('/leetcode', require('./routes/leetcode'))
 
 
 

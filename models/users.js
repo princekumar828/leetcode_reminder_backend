@@ -58,13 +58,19 @@ const userSchema = new mongoose.Schema({
   },
 
   // Reminder status tracking
-  lastRemindedAt: {
-    type: Date,
-    default: null,
-  },
-  potdSolvedToday: {
-    type: Boolean,
-    default: false,
+  reminderStatus: {
+    lastRemindedAt: {
+      type: Date,
+      default: null
+    },
+    lastReminderDate: {
+      type: Date,
+      default: null
+    },
+    lastPOTDSolved: {
+      type: Date,
+      default: null
+    }
   },
   
   // User activity tracking
@@ -106,7 +112,8 @@ userSchema.methods.getFormattedProfile = function() {
     whatsappNumber: this.whatsappNumber || 'Not set',
     frequency: this.frequency || 'Not set',
     setupComplete: this.step === 'completed',
-    lastReminded: this.lastRemindedAt ? new Date(this.lastRemindedAt).toLocaleString() : 'Never'
+    lastReminded: this.reminderStatus?.lastRemindedAt ? new Date(this.reminderStatus.lastRemindedAt).toLocaleString() : 'Never',
+    lastPOTDSolved: this.reminderStatus?.lastPOTDSolved ? new Date(this.reminderStatus.lastPOTDSolved).toLocaleString() : 'Never'
   };
   
   return profile;

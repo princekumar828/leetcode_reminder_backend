@@ -1,4 +1,5 @@
 const axios = require('axios');
+const POTD = require('../models/potd');
 
 // GraphQL query to get problem of the day info
 const getProblemOfDayQuery = `
@@ -30,7 +31,8 @@ const getProblemOfDay = async () => {
       method: 'post',
       data: {
         query: getProblemOfDayQuery
-      }
+      },
+      timeout: 5000 // 5 second timeout
     });
     
     return {
@@ -39,6 +41,16 @@ const getProblemOfDay = async () => {
     };
   } catch (error) {
     console.error('Error fetching problem of the day:', error.message);
+    throw error;
+  }
+};
+
+// Function to get today's POTD from database
+const getTodayPOTD = async () => {
+  try {
+    return await POTD.getTodayPOTD();
+  } catch (error) {
+    console.error('Error fetching POTD from database:', error.message);
     throw error;
   }
 };
@@ -55,10 +67,10 @@ const getRecentAcceptedSubmissions = async (username, limit = 15) => {
           username: username,
           limit: limit
         }
-      }
+      },
+      timeout: 5000 // 5 second timeout
     });
     
-    //console.log('Recent accepted submissions:', response.data.data.recentAcSubmissionList);
     return response.data.data.recentAcSubmissionList;
    
   } catch (error) {
@@ -70,24 +82,30 @@ const getRecentAcceptedSubmissions = async (username, limit = 15) => {
 // Main function to check if problem of the day is solved
 const isProblemOfDaySolved = async (username) => {
   try {
-    const recentSubmissions = await getRecentAcceptedSubmissions(username);
-    const problemOfDay = await getProblemOfDay();
+    const [recentSubmissions, potd] = await Promise.all([
+      getRecentAcceptedSubmissions(username),
+      getTodayPOTD()
+    ]);
+    
+    if (!potd) {
+      throw new Error('POTD not found in database');
+    }
     
     // Parse POTD date in UTC
-    const problemOfDayDate = new Date(problemOfDay.date);
+    const problemOfDayDate = new Date(potd.date);
     
     // Check if the problem of the day is in the recent submissions
     const isSolved = recentSubmissions.some(submission => {
       // Parse submission timestamp in UTC
       const submissionDate = new Date(submission.timestamp * 1000);
       
-      return submission.title === problemOfDay.title && 
+      return submission.title === potd.title && 
              submissionDate.getUTCFullYear() >= problemOfDayDate.getUTCFullYear() &&
              submissionDate.getUTCMonth() >= problemOfDayDate.getUTCMonth() &&
              submissionDate.getUTCDate() >= problemOfDayDate.getUTCDate();
     });
 
-    return {isSolved, problemOfDay};
+    return {isSolved, problemOfDay: potd};
   } catch (error) {
     console.error('Error checking if problem of the day is solved:', error.message);
     return {
@@ -99,6 +117,7 @@ const isProblemOfDaySolved = async (username) => {
 
 module.exports = {
   getProblemOfDay,
+  getTodayPOTD,
   getRecentAcceptedSubmissions,
   isProblemOfDaySolved
 };
