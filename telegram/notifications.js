@@ -1,29 +1,31 @@
-const axios = require('axios');
-const dotenv = require('dotenv');
-dotenv.config();
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+const bot = require('../telegram/telegramBot');
+
+/**
+ * Sends a reminder message to a Telegram chat
+ * @param {string|number} chatId - Telegram chat ID to send the message to
+ * @param {string} message - The message content to send (supports Markdown)
+ * @returns {Promise} - Promise that resolves when message is sent
+ */
+
 
 
 const sendTelegramReminder = async (chatId, message) => {
   try {
-    const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
-      chat_id: chatId,
-      text: message,
+    await bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown'
     });
-
-    if (!response.data.ok) {
-      throw new Error(`Telegram API error: ${response.data.description}`);
-    }
-
+    
     console.log(`✅ Telegram reminder sent to chat ${chatId}`);
+    return { success: true, chatId };
   } catch (error) {
-    console.error(`❌ Error sending Telegram reminder to ${chatId}:`, error.message);
-    throw error;
+    console.error(`❌ Failed to send Telegram reminder to ${chatId}: ${error.message}`);
+    return { success: false, error: error.message, chatId };
   }
 };
 
+
+
+
 module.exports = {
   sendTelegramReminder
-}; 
+};

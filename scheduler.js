@@ -113,9 +113,16 @@ const runReminderWindow = async () => {
 };
 
 // Fetch POTD at 00:01 UTC every day (1 minute after midnight to ensure LeetCode has updated)
-cron.schedule("1 0 * * *", fetchAndStorePOTD);
+cron.schedule("1 0 * * *", fetchAndStorePOTD,{
+  scheduled: true,
+  timezone: "UTC"
+});
 
 // Run reminders every hour during the last 11 hours (14-23 UTC)
-cron.schedule("0 13-23 * * *", runReminderWindow);
-
-//hhi
+cron.schedule("0 13-23 * * *", runReminderWindow,{
+  scheduled: true,
+  timezone: "UTC"
+});
+console.log("⏰ CRON Scheduler started successfully. Next runs:");
+console.log(`  - POTD Fetch: Will run at 00:01 UTC daily`);
+console.log(`  - Reminders: Will run at minutes 0 of hours 13-23 UTC daily`);
