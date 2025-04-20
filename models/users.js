@@ -59,17 +59,14 @@ const userSchema = new mongoose.Schema({
 
   // Reminder status tracking
   reminderStatus: {
+  
     lastRemindedAt: {
       type: Date,
       default: null
     },
-    lastReminderDate: {
-      type: Date,
-      default: null
-    },
-    lastPOTDSolved: {
-      type: Date,
-      default: null
+    lastPOTDSolvedTitle: {
+      type: String,
+      default: "Not set"
     }
   },
   

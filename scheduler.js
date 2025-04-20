@@ -37,18 +37,53 @@ const fetchAndStorePOTD = async () => {
 };
 
 // Process users in batches
-const processUserBatch = async (users, now, utcHour) => {
+const processUserBatch = async (users, utcHour) => {
+  // Create a proper Date object for today at midnight UTC for consistent comparison
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+  
+  console.log(`🔄 Processing batch of ${users.length} users at UTC hour ${utcHour}`);
+  
   const promises = users.map(async (user) => {
     try {
-      // Check if user was already reminded in the current UTC day
-      const todayUTC = new Date();
-      todayUTC.setUTCHours(0, 0, 0, 0);
+      // Get username for logging (with fallback)
+      const userIdentifier = user.leetcodeUsername || user.telegramChatId || 'unknown';
+      console.log(`🔍 Processing user ${userIdentifier}`);
       
-      if (user.reminderStatus?.lastRemindedAt && 
-          new Date(user.reminderStatus.lastRemindedAt).setUTCHours(0, 0, 0, 0) === todayUTC.getTime()) {
-        return; // Already reminded today
+      // Find today's POTD (using the properly created date object)
+      const potd = await POTD.findOne({ date: todayUTC });
+      
+      if (!potd) {
+        console.log("❌ No POTD found for today.");
+        return; // No POTD available
       }
 
+      if (!user.telegramChatId) {
+        console.log(`❌ User ${userIdentifier} has no Telegram chat ID.`);
+        return; // No Telegram chat ID
+      }
+
+      // Check if problem already solved
+      if (user.reminderStatus?.lastPOTDSolvedTitle === potd.title) {
+        console.log(`✅ User ${userIdentifier} already solved today's problem.`);
+        return; // Already solved today's problem
+      }
+      
+      // Check if reminder already sent in current hour
+      // This prevents sending multiple reminders in the same hour
+      const lastReminded = user.reminderStatus?.lastRemindedAt;
+      if (lastReminded) {
+        const lastRemindedTime = new Date(lastReminded);
+        if (lastRemindedTime.getUTCHours() === utcHour && 
+            lastRemindedTime.getUTCDate() === todayUTC.getUTCDate() && 
+            lastRemindedTime.getUTCMonth() === todayUTC.getUTCMonth() &&
+            lastRemindedTime.getUTCFullYear() === todayUTC.getUTCFullYear()) {
+          console.log(`⏭️ User ${userIdentifier} already reminded during hour ${utcHour} UTC`);
+          return; // Already reminded this hour
+        }
+      }
+    
+      // Check if problem is solved
       const { isSolved, problemOfDay } = await isProblemOfDaySolved(user.leetcodeUsername);
 
       if (!isSolved) {
@@ -59,48 +94,57 @@ const processUserBatch = async (users, now, utcHour) => {
                        `⏳ *Time Left:* ${hoursLeft} hours until reset\n\n` +
                        `Happy coding! 💻`;
 
-        await sendTelegramReminder(user.telegramChatId, message);
-
-        // Update reminder status
-        user.reminderStatus = {
-          lastRemindedAt: now,
-          lastReminderDate: todayUTC
-        };
+        // Send reminder and check the result
+        const result = await sendTelegramReminder(user.telegramChatId, message);
+        
+        if (result && result.success) {
+          // Update reminder status
+          user.reminderStatus.lastRemindedAt = new Date();
+          await user.save();
+          console.log(`✅ Reminder sent to ${userIdentifier} at hour ${utcHour} UTC`);
+        } else {
+          console.error(`⚠️ Failed to send reminder to ${userIdentifier}: ${result?.error || 'Unknown error'}`);
+        }
+      } else {
+        console.log(`✅ User ${userIdentifier} has now solved today's problem.`);
+        user.reminderStatus.lastPOTDSolvedTitle = potd.title;
         await user.save();
       }
+
     } catch (err) {
-      console.error(`❌ Error processing user ${user.leetcodeUsername}:`, err.message);
+      console.error(`❌ Error processing user ${user.leetcodeUsername || user.telegramChatId || 'unknown'}:`, err.message);
     }
   });
 
-  await Promise.all(promises);
+  // Using Promise.allSettled to ensure all users are processed even if some fail
+  await Promise.allSettled(promises);
+  console.log(`✅ Batch processing complete`);
 };
 
 const runReminderWindow = async () => {
   console.log("📅 Running POTD Reminder Check...");
   const now = new Date();
-  const utcHour = now.getUTCHours();
-  
-  // Only run during the last 10 hours before UTC midnight (14-23 UTC)
-  if (utcHour < 13 || utcHour > 23) {
-    console.log("⏰ Outside reminder window (13-23 UTC), skipping...");
+  const utcHour = now.getUTCHours();    
+ 
+  if (utcHour < 7 || utcHour > 23) {
+    console.log("⏰ Outside reminder window (7-23 UTC), skipping...");
     return;
   }
 
   try {
-    // Get total count of users
+   
     const totalUsers = await User.countDocuments({ "reminders.potd": true });
     console.log(`📊 Processing ${totalUsers} users...`);
 
-    // Process users in batches
+   
     for (let skip = 0; skip < totalUsers; skip += BATCH_SIZE) {
       const users = await User.find({ "reminders.potd": true })
         .skip(skip)
         .limit(BATCH_SIZE);
       
-      await processUserBatch(users, now, utcHour);
+      await processUserBatch(users, utcHour);
       
-      // Add a small delay between batches to prevent overwhelming the system
+      
       if (skip + BATCH_SIZE < totalUsers) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
@@ -112,13 +156,13 @@ const runReminderWindow = async () => {
   }
 };
 
-// Fetch POTD at 00:01 UTC every day (1 minute after midnight to ensure LeetCode has updated)
+
 cron.schedule("1 0 * * *", fetchAndStorePOTD,{
   scheduled: true,
   timezone: "UTC"
 });
 
-cron.schedule("0 13-23 * * *", async () => {
+cron.schedule("0 7-23 * * *", async () => {
   try {
     await runReminderWindow();
   } catch (error) {
@@ -130,14 +174,7 @@ cron.schedule("0 13-23 * * *", async () => {
 });
 
 
-cron.schedule("* * * * *", async () => {
-  try {
-    await runReminderWindow();
-  } catch (error) {
-    console.error("❌ Error in scheduled reminder:", error.message);
-  }
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
-
+module.exports = {
+  fetchAndStorePOTD,
+  runReminderWindow,
+};
