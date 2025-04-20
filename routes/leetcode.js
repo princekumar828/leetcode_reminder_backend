@@ -1,5 +1,5 @@
 
-const {getTodayPOTD}= require('../services/leetcodeService');
+const {getTodayPOTD ,getRecentAcceptedSubmissions ,isProblemOfDaySolved}= require('../services/leetcodeService');
 const express = require('express');
 
 
@@ -16,14 +16,30 @@ const router= express.Router();
 })
 
 router.get("/recent-submissions",async (req, res) => {
-    const submissions=await getRecentAcceptedSubmissions();
-    res.status(200).json(submissions);
+    const username=req.body.username;
+    if(!username){
+        res.status(400).json({error:"Username is required"});
+    }
+    try{
+        const submissions=await getRecentAcceptedSubmissions(username);
+        res.status(200).json(submissions);
+    }catch(error){
+        res.status(500).json({error:error.message});
+    }
 })
 
 router.get("/is-potd-solved",async (req, res) => {
-    const isSolved=await isProblemOfDaySolved();
-    res.status(200).json(isSolved);
-})
+    const username=req.body.username;
+    if(!username ){
+        res.status(400).json({error:"Username is required"});
+    }
+    try{
+        const isSolved=await isProblemOfDaySolved(username);
+        res.status(200).json(isSolved);
+    }catch(error){
+        res.status(500).json({error:error.message});
+    }
+});
 
 
 
