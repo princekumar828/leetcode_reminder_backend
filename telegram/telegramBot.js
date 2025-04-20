@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const dotenv = require('dotenv');
 dotenv.config();
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const {isProblemOfDaySolved , getRecentAcceptedSubmissions ,getProblemOfDay} = require('../services/leetcodeService');
+const {isProblemOfDaySolved , getRecentAcceptedSubmissions ,getProblemOfDay,getUserStats, getTodayPOTD} = require('../services/leetcodeService');
 const bot = new TelegramBot(token, { polling: true });
 
 // Start command
@@ -59,7 +59,9 @@ bot.onText(/\/help/, async (msg) => {
 /help - Show this help message
 /cancel - Cancel the current setup process
 /contact - Contact support for assistance
+/codeprofile/ - Get your LeetCode profile stats
 /potd - Get the problem of the day status
+/potdlink - Get the link to the problem of the day
 /rsubmissions - Get your recent submissions
 
 Update Commands:
@@ -273,6 +275,25 @@ bot.onText(/\/potd/, async (msg) => {
         bot.sendMessage(chatId, `You have not opted in for daily reminders. Use /setup to configure your reminders.`);
     }
 });
+
+
+bot.onText(/\/potdlink/, async (msg) => {
+    const chatId = msg.chat.id;
+    const user = await User.findOne({ telegramChatId: chatId });
+    if (!user) {
+        bot.sendMessage(chatId, `Please start the bot first by sending /start`);
+        return;
+    }
+    if (user.step !== 'completed') {
+        bot.sendMessage(chatId, `Please complete the setup process first by sending /setup`);
+        return;
+    }
+    const problem = await getTodayPOTD();
+    
+    const potdLink = `https://leetcode.com/problems/${problem.title.replace(/\s+/g, '-').toLowerCase()}/`;
+    bot.sendMessage(chatId, `The problem of the day is: ${problem.title} \n\nLink: ${potdLink}`);
+});
+    
 
 // Delete account command
 bot.onText(/\/delete_account/, async (msg) => {
@@ -494,34 +515,70 @@ bot.onText(/\/rsubmissions/, async (msg) => {
     }
 });
 
-// sync the today pod to database 
-bot.onText(/\/syspotd/, async (msg) => {
+
+
+
+
+bot.onText(/\/codeprofile/, async (msg) => {
+    console.log("🔄 Fetching LeetCode profile...");
     const chatId = msg.chat.id;
-    
-    try {
-        bot.sendMessage(chatId, "🔄 Syncing new POTD to database...");
-        console.log("🔄 Sync new POTD .");
-        
-        const { date, title } = await getProblemOfDay();
-        
-        // Create new POTD entry
-        const potdDate = new Date(date);
-        //set the utc time
-        potdDate.setUTCHours(0, 0, 0, 0);
-        
-        await POTD.findOneAndUpdate(
-          { date: potdDate },
-          { title, date: potdDate },
-          { upsert: true, new: true }
-        );
-        
-        console.log("✅ New POTD stored successfully:", title);
-        bot.sendMessage(chatId, `✅ New POTD stored successfully: ${title}`);
-        
-    } catch (error) {
-        console.error("❌ Error fetching/storing POTD:", error.message);
-        bot.sendMessage(chatId, `❌ Error syncing POTD: ${error.message}`);
+   try{
+    const user = await User.findOne({ telegramChatId: chatId });
+    if (!user) {
+        bot.sendMessage(chatId, `Please start the bot first by sending /start`);
+        return;
     }
+    if (user.step !== 'completed') {
+        bot.sendMessage(chatId, `Please complete the setup process first by sending /setup`);
+        return;
+    }
+    
+    // Check if LeetCode username is set
+    if (!user.leetcodeUsername) {
+        bot.sendMessage(chatId, `You haven't set your LeetCode username yet. Please use /update_username to set it.`);
+        return;
+    }
+
+    console.log(`Fetching profile for user: ${user.leetcodeUsername}`);
+    
+    // Fetch user stats from LeetCode API
+    const stats = await getUserStats(user.leetcodeUsername);
+
+    // {
+    //     username: 'princekumar89',
+    //     totalSolved: 666,
+    //     solvedByDifficulty: { easy: 216, medium: 397, hard: 53 },
+    //     submissionsByDifficulty: { easy: 267, medium: 505, hard: 64 },
+    //     totalSubmissions: 836
+    //   }
+
+
+    if (!stats) {
+        bot.sendMessage(chatId, `No profile data found for ${user.leetcodeUsername}.`);
+        return;
+    }
+    let message = `👤 LeetCode Profile for ${user.leetcodeUsername}:\n\n`;  
+    message += `Total Problems Solved: ${stats.totalSolved}\n`;
+    message += `Total Submissions: ${stats.totalSubmissions}\n\n`;
+    message += `Problems Solved by Difficulty:\n`;
+    message += `Easy: ${stats.solvedByDifficulty.easy || 0}\n`;
+    message += `Medium: ${stats.solvedByDifficulty.medium || 0}\n`;
+    message += `Hard: ${stats.solvedByDifficulty.hard || 0}\n\n`;
+    message += `Submissions by Difficulty:\n`;
+    message += `Easy: ${stats.submissionsByDifficulty.easy || 0}\n`;
+    message += `Medium: ${stats.submissionsByDifficulty.medium || 0}\n`;
+    message += `Hard: ${stats.submissionsByDifficulty.hard || 0}\n\n`;
+    message += `Use /rsubmissions to view your recent submissions.\n`;
+    message += `Use /potd to check the problem of the day status.\n`;
+  
+    
+   
+    bot.sendMessage(chatId, message);
+
+   }catch(error){
+       console.error(`Error in /leecodeprofile command: ${error.message}`);
+       bot.sendMessage(chatId, `Oops! Something went wrong. Please try again later or contact support.`);
+   }
 });
 
 // Handle any errors

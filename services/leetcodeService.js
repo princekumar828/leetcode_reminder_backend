@@ -116,9 +116,94 @@ const isProblemOfDaySolved = async (username) => {
   }
 };
 
+
+const getUserProfileQuery = `
+  query getUserProfile($username: String!) {
+    matchedUser(username: $username) {
+      username
+      submitStats: submitStatsGlobal {
+        acSubmissionNum {
+          difficulty
+          count
+          submissions
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Fetch comprehensive statistics for a LeetCode user
+ * @param {string} username - LeetCode username
+ * @returns {Object} User statistics including problems solved by difficulty
+ */
+const getUserStats = async (username) => {
+  if (!username) {
+    throw new Error('Username is required');
+  }
+
+  try {
+    console.log(`🔍 Fetching LeetCode statistics for user: ${username}`);
+    
+    const response = await axios({
+      url: 'https://leetcode.com/graphql',
+      method: 'post',
+      data: {
+        query: getUserProfileQuery,
+        variables: {
+          username: username
+        }
+      },
+      timeout: 8000 // 8 second timeout
+    });
+
+    const userData = response.data.data.matchedUser;
+    
+    if (!userData) {
+      throw new Error(`User '${username}' not found on LeetCode`);
+    }
+
+    // Format the response data into a cleaner structure
+    const stats = {
+      username: userData.username,
+      totalSolved: 0,
+      solvedByDifficulty: {},
+      submissionsByDifficulty: {}
+    };
+
+    // Process problems solved by difficulty
+    if (userData.submitStats && userData.submitStats.acSubmissionNum) {
+      userData.submitStats.acSubmissionNum.forEach(item => {
+        if (item.difficulty !== "All") {
+          stats.solvedByDifficulty[item.difficulty.toLowerCase()] = item.count;
+          stats.submissionsByDifficulty[item.difficulty.toLowerCase()] = item.submissions;
+        } else {
+          stats.totalSolved = item.count;
+          stats.totalSubmissions = item.submissions;
+        }
+      });
+    }
+    
+    console.log(`✅ Successfully fetched stats for user: ${userData}`);
+    return stats;
+  } catch (error) {
+    console.error(`❌ Error fetching user stats: ${error.message}`);
+    if (error.response) {
+      console.error(`Status: ${error.response.status}, Data:`, error.response.data);
+    }
+    throw new Error(`Failed to fetch LeetCode statistics: ${error.message}`);
+  }
+};
+
+
+
+
+
+// Don't forget to add this to your module exports
 module.exports = {
   getProblemOfDay,
   getTodayPOTD,
   getRecentAcceptedSubmissions,
-  isProblemOfDaySolved
+  isProblemOfDaySolved,
+  getUserStats  // Add the new function to exports
 };

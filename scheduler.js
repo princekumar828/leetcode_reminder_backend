@@ -173,19 +173,6 @@ cron.schedule("0 7-23 * * *", async () => {
   timezone: "UTC"
 });
 
-cron.schedule("* * * * *", async () => {
-  try {
-    await runReminderWindow();
-  } catch (error) {
-    console.error("❌ Error in scheduled reminder:", error.message);
-  }
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
-
-
-
 
 module.exports = {
   fetchAndStorePOTD,
