@@ -118,11 +118,26 @@ cron.schedule("1 0 * * *", fetchAndStorePOTD,{
   timezone: "UTC"
 });
 
-// Run reminders every hour during the last 11 hours (14-23 UTC)
-cron.schedule("0 13-23 * * *", runReminderWindow,{
+cron.schedule("0 13-23 * * *", async () => {
+  try {
+    await runReminderWindow();
+  } catch (error) {
+    console.error("❌ Error in scheduled reminder:", error.message);
+  }
+}, {
   scheduled: true,
   timezone: "UTC"
 });
-console.log("⏰ CRON Scheduler started successfully. Next runs:");
-console.log(`  - POTD Fetch: Will run at 00:01 UTC daily`);
-console.log(`  - Reminders: Will run at minutes 0 of hours 13-23 UTC daily`);
+
+
+cron.schedule("* * * * *", async () => {
+  try {
+    await runReminderWindow();
+  } catch (error) {
+    console.error("❌ Error in scheduled reminder:", error.message);
+  }
+}, {
+  scheduled: true,
+  timezone: "UTC"
+});
+
