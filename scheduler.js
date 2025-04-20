@@ -82,8 +82,8 @@ const runReminderWindow = async () => {
   const utcHour = now.getUTCHours();
   
   // Only run during the last 10 hours before UTC midnight (14-23 UTC)
-  if (utcHour < 14 || utcHour > 23) {
-    console.log("⏰ Outside reminder window (14-23 UTC), skipping...");
+  if (utcHour < 13 || utcHour > 23) {
+    console.log("⏰ Outside reminder window (13-23 UTC), skipping...");
     return;
   }
 
@@ -102,7 +102,7 @@ const runReminderWindow = async () => {
       
       // Add a small delay between batches to prevent overwhelming the system
       if (skip + BATCH_SIZE < totalUsers) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
@@ -115,7 +115,7 @@ const runReminderWindow = async () => {
 // Fetch POTD at 00:01 UTC every day (1 minute after midnight to ensure LeetCode has updated)
 cron.schedule("1 0 * * *", fetchAndStorePOTD);
 
-// Run reminders every hour during the last 10 hours (14-23 UTC)
-cron.schedule("0 14-23 * * *", runReminderWindow);
+// Run reminders every hour during the last 11 hours (14-23 UTC)
+cron.schedule("0 13-23 * * *", runReminderWindow);
 
 //hhi

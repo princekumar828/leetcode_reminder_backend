@@ -46,11 +46,9 @@ connectdb()
 
 
 const userrouter = require('./routes/users')
-const potdRouter = require('./routes/potd')
 //Routes
 app.use('/users', userrouter)
 app.use('/leetcode', require('./routes/leetcode'))
-app.use('/potd', potdRouter)
 
 
 

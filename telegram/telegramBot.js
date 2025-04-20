@@ -40,6 +40,7 @@ bot.onText(/\/setup/, async (msg) => {
     }
 
     // Reset the step to begin setup process
+
     user.step = 'askEmail';
     await user.save();
     
@@ -144,7 +145,7 @@ bot.onText(/\/cancel/, async (msg) => {
 // Contact support command
 bot.onText(/\/contact/, async (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Need help? You can reach our support team at prince `);
+    bot.sendMessage(chatId, `Need help? You can reach our support team at Prince Kumar`);
 });
 
 // Update email command
@@ -467,29 +468,45 @@ bot.onText(/\/rsubmissions/, async (msg) => {
         bot.sendMessage(chatId, `Please complete the setup process first by sending /setup`);
         return;
     }
-    // Fetch the submissions from LeetCode API
-    const submissions = await getRecentAcceptedSubmissions(user.leetcodeUsername);
-    if (submissions && submissions.length > 0) {
-        let message = `📜 Your Recent Submissions:\n\n`;
-        submissions.forEach((submission, index) => {
-            message += `${index + 1}. Problem: ${submission.title}\n`;
-        });
-        bot.sendMessage(chatId, message);
-    } else {
-        bot.sendMessage(chatId, `No recent submissions found.`);
+    
+    // Check if LeetCode username is set
+    if (!user.leetcodeUsername) {
+        bot.sendMessage(chatId, `You haven't set your LeetCode username yet. Please use /update_username to set it.`);
+        return;
+    }
+    
+    try {
+        bot.sendMessage(chatId, "🔄 Fetching your recent submissions...");
+        // Fetch the submissions from LeetCode API
+        const submissions = await getRecentAcceptedSubmissions(user.leetcodeUsername);
+        if (submissions && submissions.length > 0) {
+            let message = `📜 Your Recent Submissions:\n\n`;
+            submissions.forEach((submission, index) => {
+                message += `${index + 1}. Problem: ${submission.title}\n`;
+            });
+            bot.sendMessage(chatId, message);
+        } else {
+            bot.sendMessage(chatId, `No recent submissions found.`);
+        }
+    } catch (error) {
+        console.error(`Error fetching submissions for ${user.leetcodeUsername}:`, error.message);
+        bot.sendMessage(chatId, `Error fetching your submissions. Please try again later.`);
     }
 });
 
 // sync the today pod to database 
 bot.onText(/\/syspotd/, async (msg) => {
+    const chatId = msg.chat.id;
+    
     try {
+        bot.sendMessage(chatId, "🔄 Syncing new POTD to database...");
         console.log("🔄 Sync new POTD .");
-        
         
         const { date, title } = await getProblemOfDay();
         
         // Create new POTD entry
         const potdDate = new Date(date);
+        //set the utc time
         potdDate.setUTCHours(0, 0, 0, 0);
         
         await POTD.findOneAndUpdate(
@@ -499,10 +516,12 @@ bot.onText(/\/syspotd/, async (msg) => {
         );
         
         console.log("✅ New POTD stored successfully:", title);
+        bot.sendMessage(chatId, `✅ New POTD stored successfully: ${title}`);
         
-      } catch (error) {
+    } catch (error) {
         console.error("❌ Error fetching/storing POTD:", error.message);
-      }
+        bot.sendMessage(chatId, `❌ Error syncing POTD: ${error.message}`);
+    }
 });
 
 // Handle any errors

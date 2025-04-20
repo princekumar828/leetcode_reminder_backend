@@ -56,7 +56,7 @@ const getTodayPOTD = async () => {
 };
 
 // Function to get recent accepted submissions
-const getRecentAcceptedSubmissions = async (username, limit = 15) => {
+const getRecentAcceptedSubmissions = async (username, limit = 10) => {
   try {
     const response = await axios({
       url: 'https://leetcode.com/graphql',

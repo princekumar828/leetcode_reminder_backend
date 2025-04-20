@@ -99,7 +99,6 @@ const handelusersetup = async (req, res) => {
         return res.status(400).json({ message: 'Email required' });
     }
 
-    console.log(email);
     // Check if the email is valid
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
