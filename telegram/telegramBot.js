@@ -59,7 +59,7 @@ bot.onText(/\/help/, async (msg) => {
 /help - Show this help message
 /cancel - Cancel the current setup process
 /contact - Contact support for assistance
-/codeprofile/ - Get your LeetCode profile stats
+/codeprofile - Get your LeetCode profile stats
 /potd - Get the problem of the day status
 /potdlink - Get the link to the problem of the day
 /rsubmissions - Get your recent submissions
