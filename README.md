@@ -1,4 +1,4 @@
-# LeetCode POTD Reminder
+# LeetCode POTD Reminder (Whatsapp to be fixed )
 
 A Telegram bot and backend service that helps users stay consistent with LeetCode's Problem of the Day (POTD) by sending reminders and tracking progress.
 
