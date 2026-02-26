@@ -17,7 +17,7 @@ A Telegram bot and backend service that helps users stay consistent with LeetCod
 
 ## 📋 Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js 
 - MongoDB (local or Atlas)
 - Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
 
